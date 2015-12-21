@@ -1,0 +1,25 @@
+{
+    "name": "enrise/basebox-installer",
+    "description": "Basebox installer.",
+    "keywords": ["enrise"],
+    "license": "Proprietary",
+    "authors": [
+        {
+            "name": "Frank Klaassen",
+            "email": "frank@enrise.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Basebox\\Installer\\Console\\": "src/"
+        }
+    },
+    "require": {
+        "symfony/console": "~2.3|~3.0",
+        "symfony/process": "~2.3|~3.0",
+        "symfony/yaml": "~2.3|~3.0"
+    },
+    "bin": [
+        "basebox"
+    ]
+}
