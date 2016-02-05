@@ -24,12 +24,17 @@ class NewCommand extends Command
             ->setDescription('Install the basebox for the current project.')
             ->addOption('webserver', null, InputOption::VALUE_OPTIONAL, 'Which webserver do you want (nginx, apache)?',
                 'nginx')
+
             ->addOption('edition', null, InputOption::VALUE_OPTIONAL, 'Which stack do you want (vanilla, zendserver)?',
                 'zendserver')
             ->addOption('zs-version', null, InputOption::VALUE_OPTIONAL,
                 'Which version of ZendServer do you want to use', null)
-            ->addOption('zs-php-version', null, InputOption::VALUE_OPTIONAL,
-                'Which version of ZendServer (PHP) do you want to use', null)
+            ->addOption('php-version', null, InputOption::VALUE_OPTIONAL,
+                'Which version of PHP do you want to use', null)
+
+            ->addOption('nginx-mainline', null, InputOption::VALUE_OPTIONAL,
+                'Use the NGINX Mainline or stable release', False)
+
             ->addOption('domain', null, InputOption::VALUE_OPTIONAL, 'Create a domain with the following name')
             ->addOption('database', null, InputOption::VALUE_OPTIONAL, 'Create a database with the following name')
             ->addOption('up', null, InputOption::VALUE_NONE, 'Run "vagrant up" after installing the basebox');
@@ -118,18 +123,33 @@ class NewCommand extends Command
             ]
         ];
 
-        if (strtolower($input->getOption('edition')) == 'zendserver') {
+        if (strtolower($input->getOption('edition')) === 'zendserver') {
             $pillar['zendserver'] = [
                 'webserver' => $input->getOption('webserver'),
                 'bootstrap' => false,
             ];
 
-            if (!is_null($input->getOption('zs-version'))) {
+            if (null !== $input->getOption('zs-version')) {
                 $pillar['zendserver']['version']['zend'] = $input->getOption('zs-version');
             }
 
-            if (!is_null($input->getOption('zs-php-version'))) {
-                $pillar['zendserver']['version']['php'] = $input->getOption('zs-php-version');
+            if (null !== $input->getOption('php-version')) {
+                $pillar['zendserver']['version']['php'] = $input->getOption('php-version');
+            }
+
+            if (null !== $input->getOption('nginx-mainline')) {
+                $pillar['zendserver']['nginx_mainline'] = (bool)$input->getOption('nginx-mainline');
+            }
+        } else {
+            // Use vanilla
+            $pillar['zendserver'] = '~';
+
+            if (null !== $input->getOption('nginx-mainline')) {
+                $pillar['nginx']['package']['mainline'] = (bool)$input->getOption('nginx-mainline');
+            }
+
+            if (null !== $input->getOption('php-version')) {
+                $pillar['phpfpm']['php_versions'] = [$input->getOption('php-version')];
             }
         }
 
@@ -150,7 +170,7 @@ class NewCommand extends Command
         $domain = $input->getOption('domain');
 
         $user = 'project';
-        if (!is_null($domain)) {
+        if (null !== $domain) {
             // Generate username based on domain
             $user = $this->generateUsername($domain);
 
@@ -165,6 +185,11 @@ class NewCommand extends Command
                 ],
             ];
 
+            // Allow PHP version to be specified
+            if (null !== $input->getOption('php-version')) {
+                $vhost['php_version'] = $input->getOption('php-version');
+            }
+
             $pillar['vhosting']['users'][$user]['vhost'][$domain] = $vhost;
 
             $output->writeln(sprintf('<info>Vhost <comment>%s</comment> created. (user: <comment>%s</comment>)</info>',
@@ -172,7 +197,7 @@ class NewCommand extends Command
         }
 
         $database = $input->getOption('database');
-        if (!is_null($database)) {
+        if (null !== $database) {
             $db_pass = $this->generatePassword(12);
 
             $pillar['vhosting']['users'][$user]['mysql_database'] = [
@@ -244,7 +269,7 @@ class NewCommand extends Command
     protected function generateUsername($domain)
     {
         $string = strtolower($domain);
-        $string = preg_replace("/[^a-zA-Z 0-9]+/", "_", $string);
+        $string = preg_replace('/[^a-zA-Z 0-9]+/', '_', $string);
         $string = substr($string, 0, 15); // max length of unix users = 16
         return $string;
     }
@@ -255,7 +280,7 @@ class NewCommand extends Command
      */
     protected function generatePassword($length = 12)
     {
-        $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
         return substr(str_shuffle($chars), 0, $length);
     }

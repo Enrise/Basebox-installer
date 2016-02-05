@@ -2,7 +2,7 @@
     "name": "enrise/basebox-installer",
     "description": "Basebox installer.",
     "keywords": ["enrise"],
-    "license": "Proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "Frank Klaassen",
